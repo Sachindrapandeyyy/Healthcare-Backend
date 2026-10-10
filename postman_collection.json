@@ -1,0 +1,485 @@
+{
+	"info": {
+		"_postman_id": "a902f183-b710-449e-b9b2-healthcare-api-2026",
+		"name": "Healthcare Backend API",
+		"description": "Postman collection for Healthcare Backend API built with Django, DRF, PostgreSQL, and SimpleJWT.",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"variable": [
+		{
+			"key": "base_url",
+			"value": "http://127.0.0.1:8000",
+			"type": "string"
+		},
+		{
+			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "patient_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "doctor_id",
+			"value": "1",
+			"type": "string"
+		},
+		{
+			"key": "mapping_id",
+			"value": "1",
+			"type": "string"
+		}
+	],
+	"item": [
+		{
+			"name": "1. Authentication",
+			"item": [
+				{
+					"name": "Register User",
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Dr. John Watson\",\n    \"email\": \"watson@bakerstreet.org\",\n    \"password\": \"Sherlock221B!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/register/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "register", ""]
+						},
+						"description": "Registers a new user in the system with name, email, and password."
+					}
+				},
+				{
+					"name": "Login User (Get JWT)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"if (pm.response.code === 200) {",
+									"    var jsonData = pm.response.json();",
+									"    if (jsonData.access) {",
+									"        pm.collectionVariables.set('access_token', jsonData.access);",
+									"        console.log('Access token updated in collection variables');",
+									"    }",
+									"}"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"email\": \"watson@bakerstreet.org\",\n    \"password\": \"Sherlock221B!\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/login/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "login", ""]
+						},
+						"description": "Authenticates user credentials and returns JWT access and refresh tokens."
+					}
+				}
+			]
+		},
+		{
+			"name": "2. Patients",
+			"item": [
+				{
+					"name": "Create Patient",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Arthur Conan Doyle\",\n    \"age\": 42,\n    \"gender\": \"Male\",\n    \"contact_number\": \"+44-20-7946-0958\",\n    \"address\": \"Crowborough, Sussex\",\n    \"medical_history\": \"Hypertension, seasonal allergies\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/patients/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "patients", ""]
+						},
+						"description": "Creates a new patient record tied to the authenticated user."
+					}
+				},
+				{
+					"name": "Get All Patients (User-scoped)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/patients/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "patients", ""]
+						},
+						"description": "Retrieves all patients created by the authenticated user."
+					}
+				},
+				{
+					"name": "Get Patient by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/patients/{{patient_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "patients", "{{patient_id}}", ""]
+						},
+						"description": "Retrieves full details of a specific patient."
+					}
+				},
+				{
+					"name": "Update Patient",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Arthur Conan Doyle\",\n    \"age\": 43,\n    \"gender\": \"Male\",\n    \"contact_number\": \"+44-20-7946-0958\",\n    \"address\": \"Windlesham Manor, Sussex\",\n    \"medical_history\": \"Hypertension managed with medication\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/patients/{{patient_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "patients", "{{patient_id}}", ""]
+						},
+						"description": "Updates patient details."
+					}
+				},
+				{
+					"name": "Delete Patient",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/patients/{{patient_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "patients", "{{patient_id}}", ""]
+						},
+						"description": "Deletes a patient record."
+					}
+				}
+			]
+		},
+		{
+			"name": "3. Doctors",
+			"item": [
+				{
+					"name": "Create Doctor",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Joseph Bell\",\n    \"specialization\": \"Surgery & Forensic Pathology\",\n    \"phone\": \"+44-131-496-0123\",\n    \"email\": \"dr.bell@edinburgh-infirmary.ac.uk\",\n    \"experience_years\": 28\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/doctors/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "doctors", ""]
+						},
+						"description": "Registers a new doctor in the system."
+					}
+				},
+				{
+					"name": "Get All Doctors",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/doctors/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "doctors", ""]
+						},
+						"description": "Retrieves the directory of all doctors."
+					}
+				},
+				{
+					"name": "Get Doctor by ID",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/doctors/{{doctor_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "doctors", "{{doctor_id}}", ""]
+						},
+						"description": "Retrieves details of a specific doctor."
+					}
+				},
+				{
+					"name": "Update Doctor",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"Joseph Bell, FRCSE\",\n    \"specialization\": \"Surgery & Forensic Diagnostics\",\n    \"phone\": \"+44-131-496-0123\",\n    \"email\": \"dr.bell@edinburgh-infirmary.ac.uk\",\n    \"experience_years\": 29\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/doctors/{{doctor_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "doctors", "{{doctor_id}}", ""]
+						},
+						"description": "Updates details of a specific doctor."
+					}
+				},
+				{
+					"name": "Delete Doctor",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/doctors/{{doctor_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "doctors", "{{doctor_id}}", ""]
+						},
+						"description": "Deletes a doctor record."
+					}
+				}
+			]
+		},
+		{
+			"name": "4. Patient-Doctor Mappings",
+			"item": [
+				{
+					"name": "Assign Doctor to Patient",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"patient\": 1,\n    \"doctor\": 1,\n    \"notes\": \"Assigned for cardiac evaluation and treatment plan\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/mappings/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mappings", ""]
+						},
+						"description": "Assigns a doctor to a patient created by the authenticated user."
+					}
+				},
+				{
+					"name": "Get All Mappings",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/mappings/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mappings", ""]
+						},
+						"description": "Retrieves all patient-doctor mappings belonging to the user's patients."
+					}
+				},
+				{
+					"name": "Get Doctors Assigned to Specific Patient",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/mappings/{{patient_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mappings", "{{patient_id}}", ""]
+						},
+						"description": "Retrieves all doctors assigned to a specific patient."
+					}
+				},
+				{
+					"name": "Remove Doctor from Patient (Delete Mapping)",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/mappings/{{mapping_id}}/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "mappings", "{{mapping_id}}", ""]
+						},
+						"description": "Removes a doctor assignment from a patient by mapping ID."
+					}
+				}
+			]
+		}
+	]
+}
