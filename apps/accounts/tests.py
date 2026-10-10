@@ -9,6 +9,7 @@ class AuthenticationAPITests(TestCase):
         self.client = APIClient()
         self.register_url = reverse('register')
         self.login_url = reverse('login')
+        self.logout_url = reverse('logout')
         self.valid_user_data = {
             'name': 'Test User',
             'email': 'testuser@example.com',
@@ -62,3 +63,22 @@ class AuthenticationAPITests(TestCase):
         }
         response = self.client.post(self.login_url, login_data, format='json')
         self.assertEqual(response.status_code, status.HTTP_400_BAD_REQUEST)
+
+    def test_logout_blacklists_token_success(self):
+        self.client.post(self.register_url, self.valid_user_data, format='json')
+        login_resp = self.client.post(
+            self.login_url,
+            {'email': 'testuser@example.com', 'password': 'SecurePassword123'},
+            format='json'
+        )
+        access_token = login_resp.data['access']
+        refresh_token = login_resp.data['refresh']
+
+        self.client.credentials(HTTP_AUTHORIZATION=f'Bearer {access_token}')
+        logout_resp = self.client.post(
+            self.logout_url,
+            {'refresh': refresh_token},
+            format='json'
+        )
+        self.assertEqual(logout_resp.status_code, status.HTTP_200_OK)
+        self.assertIn('blacklisted', logout_resp.data['message'].lower())

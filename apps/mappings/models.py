@@ -1,8 +1,10 @@
 from django.db import models
+from apps.common.models import SoftDeleteModel
 
-class PatientDoctorMapping(models.Model):
+class PatientDoctorMapping(SoftDeleteModel):
     """
     Mapping model linking a Patient to an assigned Doctor.
+    Supports soft-deletion so historical assignment logs are retained.
     """
     patient = models.ForeignKey(
         'patients.Patient',

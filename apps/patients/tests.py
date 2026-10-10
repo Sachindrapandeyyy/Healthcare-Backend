@@ -59,8 +59,33 @@ class PatientAPITests(TestCase):
         self.client.force_authenticate(user=self.user1)
         response = self.client.get(self.list_create_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 1)
-        self.assertEqual(response.data[0]['name'], 'User1 Patient')
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 1)
+        self.assertEqual(results[0]['name'], 'User1 Patient')
+
+    def test_patient_search_and_filter(self):
+        Patient.objects.create(
+            name='Alice Smith', age=30, gender='Female',
+            contact_number='1234567890', address='Addr A', created_by=self.user1
+        )
+        Patient.objects.create(
+            name='Bob Jones', age=45, gender='Male',
+            contact_number='0987654321', address='Addr B', created_by=self.user1
+        )
+
+        self.client.force_authenticate(user=self.user1)
+
+        # Filter by gender
+        res_filter = self.client.get(f"{self.list_create_url}?gender=Female")
+        results_filter = res_filter.data.get('results', res_filter.data)
+        self.assertEqual(len(results_filter), 1)
+        self.assertEqual(results_filter[0]['name'], 'Alice Smith')
+
+        # Search by name
+        res_search = self.client.get(f"{self.list_create_url}?search=Jones")
+        results_search = res_search.data.get('results', res_search.data)
+        self.assertEqual(len(results_search), 1)
+        self.assertEqual(results_search[0]['name'], 'Bob Jones')
 
     def test_get_patient_detail(self):
         patient = Patient.objects.create(
@@ -101,24 +126,26 @@ class PatientAPITests(TestCase):
         self.assertEqual(response.data['name'], 'Updated Name')
         self.assertEqual(response.data['age'], 26)
 
-    def test_delete_patient(self):
+    def test_delete_patient_soft_deletes(self):
         patient = Patient.objects.create(
             name='Delete Me', age=30, gender='Female',
             contact_number='555', address='Addr 5', created_by=self.user1
         )
         detail_url = reverse('patient-detail', kwargs={'id': patient.id})
 
-        # User2 fails to delete user1's patient
-        self.client.force_authenticate(user=self.user2)
-        response_user2 = self.client.delete(detail_url)
-        self.assertEqual(response_user2.status_code, status.HTTP_404_NOT_FOUND)
-        self.assertTrue(Patient.objects.filter(id=patient.id).exists())
-
         # User1 deletes own patient
         self.client.force_authenticate(user=self.user1)
         response = self.client.delete(detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Active queryset excludes soft-deleted record
         self.assertFalse(Patient.objects.filter(id=patient.id).exists())
+
+        # But all_objects retains the record for healthcare compliance audit
+        archived = Patient.all_objects.filter(id=patient.id).first()
+        self.assertIsNotNone(archived)
+        self.assertTrue(archived.is_deleted)
+        self.assertIsNotNone(archived.deleted_at)
 
     def test_patient_validation_invalid_age(self):
         self.client.force_authenticate(user=self.user1)

@@ -34,7 +34,7 @@ class DoctorAPITests(TestCase):
         self.assertEqual(response.data['specialization'], 'Diagnostic Medicine')
         self.assertTrue(Doctor.objects.filter(email='house@princeton-plainsboro.org').exists())
 
-    def test_get_all_doctors(self):
+    def test_get_all_doctors_paginated(self):
         Doctor.objects.create(
             name='Doctor A', specialization='Cardiology', phone='111',
             email='doca@example.com', experience_years=5
@@ -47,7 +47,32 @@ class DoctorAPITests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.get(self.list_create_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
-        self.assertEqual(len(response.data), 2)
+        results = response.data.get('results', response.data)
+        self.assertEqual(len(results), 2)
+
+    def test_doctor_search_and_filter(self):
+        Doctor.objects.create(
+            name='Stephen Strange', specialization='Neurology', phone='111',
+            email='strange@doc.org', experience_years=15
+        )
+        Doctor.objects.create(
+            name='Leonard McCoy', specialization='General Medicine', phone='222',
+            email='mccoy@doc.org', experience_years=10
+        )
+
+        self.client.force_authenticate(user=self.user)
+
+        # Filter by specialization
+        res_filter = self.client.get(f"{self.list_create_url}?specialization=Neurology")
+        results_filter = res_filter.data.get('results', res_filter.data)
+        self.assertEqual(len(results_filter), 1)
+        self.assertEqual(results_filter[0]['name'], 'Stephen Strange')
+
+        # Search by name
+        res_search = self.client.get(f"{self.list_create_url}?search=McCoy")
+        results_search = res_search.data.get('results', res_search.data)
+        self.assertEqual(len(results_search), 1)
+        self.assertEqual(results_search[0]['name'], 'Leonard McCoy')
 
     def test_get_doctor_detail(self):
         doctor = Doctor.objects.create(
@@ -81,7 +106,7 @@ class DoctorAPITests(TestCase):
         self.assertEqual(response.data['name'], 'Doctor Edited')
         self.assertEqual(response.data['experience_years'], 4)
 
-    def test_delete_doctor(self):
+    def test_delete_doctor_soft_deletes(self):
         doctor = Doctor.objects.create(
             name='Doctor Delete', specialization='Dermatology', phone='555',
             email='docdelete@example.com', experience_years=7
@@ -91,7 +116,15 @@ class DoctorAPITests(TestCase):
         self.client.force_authenticate(user=self.user)
         response = self.client.delete(detail_url)
         self.assertEqual(response.status_code, status.HTTP_200_OK)
+
+        # Active queryset excludes soft-deleted doctor
         self.assertFalse(Doctor.objects.filter(id=doctor.id).exists())
+
+        # all_objects retains doctor record for audit log
+        archived = Doctor.all_objects.filter(id=doctor.id).first()
+        self.assertIsNotNone(archived)
+        self.assertTrue(archived.is_deleted)
+        self.assertIsNotNone(archived.deleted_at)
 
     def test_doctor_duplicate_email_rejected(self):
         self.client.force_authenticate(user=self.user)

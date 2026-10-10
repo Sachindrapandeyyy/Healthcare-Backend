@@ -1,11 +1,13 @@
 from django.db import models
+from apps.common.models import SoftDeleteModel
 
-class Doctor(models.Model):
+class Doctor(SoftDeleteModel):
     """
     Doctor model storing medical practitioner information.
+    Supports soft-deletion for medical staff retention compliance.
     """
-    name = models.CharField(max_length=255)
-    specialization = models.CharField(max_length=255)
+    name = models.CharField(max_length=255, db_index=True)
+    specialization = models.CharField(max_length=255, db_index=True)
     phone = models.CharField(max_length=25)
     email = models.EmailField(unique=True, db_index=True)
     experience_years = models.PositiveIntegerField(default=0)

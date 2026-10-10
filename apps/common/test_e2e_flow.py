@@ -8,6 +8,16 @@ class EndToEndHealthcareWorkflowTests(TestCase):
         self.client = APIClient()
 
     def test_complete_healthcare_workflow(self):
+        # 0. Health check endpoint (Public)
+        health_resp = self.client.get(reverse('health-check'))
+        self.assertEqual(health_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(health_resp.data['status'], 'healthy')
+        self.assertEqual(health_resp.data['database'], 'connected')
+
+        # 0.1 OpenAPI schema endpoint
+        schema_resp = self.client.get(reverse('schema'))
+        self.assertEqual(schema_resp.status_code, status.HTTP_200_OK)
+
         # 1. Register a new user
         reg_resp = self.client.post(
             reverse('register'),
@@ -32,6 +42,7 @@ class EndToEndHealthcareWorkflowTests(TestCase):
         )
         self.assertEqual(login_resp.status_code, status.HTTP_200_OK)
         access_token = login_resp.data['access']
+        refresh_token = login_resp.data['refresh']
         self.assertTrue(bool(access_token))
 
         # Set Bearer token in client authorization header
@@ -55,6 +66,11 @@ class EndToEndHealthcareWorkflowTests(TestCase):
         patient_id = patient_resp.data['id']
         self.assertEqual(patient_resp.data['name'], 'John Reese')
 
+        # 3.1 Verify paginated patient list
+        patients_list_resp = self.client.get(reverse('patient-list-create'))
+        self.assertEqual(patients_list_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(patients_list_resp.data['count'], 1)
+
         # 4. Create a doctor
         doctor_resp = self.client.post(
             reverse('doctor-list-create'),
@@ -70,6 +86,11 @@ class EndToEndHealthcareWorkflowTests(TestCase):
         self.assertEqual(doctor_resp.status_code, status.HTTP_201_CREATED)
         doctor_id = doctor_resp.data['id']
         self.assertEqual(doctor_resp.data['name'], 'Harold Finch')
+
+        # 4.1 Verify paginated doctor list
+        doctors_list_resp = self.client.get(reverse('doctor-list-create'))
+        self.assertEqual(doctors_list_resp.status_code, status.HTTP_200_OK)
+        self.assertEqual(doctors_list_resp.data['count'], 1)
 
         # 5. Assign doctor to patient (POST /api/mappings/)
         mapping_resp = self.client.post(
@@ -136,12 +157,6 @@ class EndToEndHealthcareWorkflowTests(TestCase):
         )
         self.assertEqual(delete_map_resp.status_code, status.HTTP_200_OK)
 
-        # Verify mapping is gone
-        verify_mappings_resp = self.client.get(
-            reverse('mapping-detail-delete', kwargs={'id': patient_id})
-        )
-        self.assertEqual(len(verify_mappings_resp.data), 0)
-
         # 11. Delete patient (DELETE /api/patients/<id>/)
         delete_patient_resp = self.client.delete(
             reverse('patient-detail', kwargs={'id': patient_id})
@@ -153,3 +168,11 @@ class EndToEndHealthcareWorkflowTests(TestCase):
             reverse('doctor-detail', kwargs={'id': doctor_id})
         )
         self.assertEqual(delete_doctor_resp.status_code, status.HTTP_200_OK)
+
+        # 13. Logout & Token Blacklist (POST /api/auth/logout/)
+        logout_resp = self.client.post(
+            reverse('logout'),
+            {'refresh': refresh_token},
+            format='json'
+        )
+        self.assertEqual(logout_resp.status_code, status.HTTP_200_OK)

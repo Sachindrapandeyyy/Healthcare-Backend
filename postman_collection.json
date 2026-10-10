@@ -1,8 +1,8 @@
 {
 	"info": {
 		"_postman_id": "a902f183-b710-449e-b9b2-healthcare-api-2026",
-		"name": "Healthcare Backend API",
-		"description": "Postman collection for Healthcare Backend API built with Django, DRF, PostgreSQL, and SimpleJWT.",
+		"name": "Healthcare Backend Enterprise API",
+		"description": "Production-Grade Healthcare API built with Django, DRF, PostgreSQL, SimpleJWT, and OpenAPI 3.0.",
 		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
 	},
 	"variable": [
@@ -13,6 +13,11 @@
 		},
 		{
 			"key": "access_token",
+			"value": "",
+			"type": "string"
+		},
+		{
+			"key": "refresh_token",
 			"value": "",
 			"type": "string"
 		},
@@ -33,6 +38,37 @@
 		}
 	],
 	"item": [
+		{
+			"name": "0. System & Health",
+			"item": [
+				{
+					"name": "Health Check Probe",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/health/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "health", ""]
+						},
+						"description": "Verifies service health, database connectivity, and version."
+					}
+				},
+				{
+					"name": "OpenAPI 3.0 Schema",
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{base_url}}/api/schema/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "schema", ""]
+						},
+						"description": "Downloads the machine-readable OpenAPI 3.0 YAML/JSON specification."
+					}
+				}
+			]
+		},
 		{
 			"name": "1. Authentication",
 			"item": [
@@ -69,8 +105,11 @@
 									"    var jsonData = pm.response.json();",
 									"    if (jsonData.access) {",
 									"        pm.collectionVariables.set('access_token', jsonData.access);",
-									"        console.log('Access token updated in collection variables');",
 									"    }",
+									"    if (jsonData.refresh) {",
+									"        pm.collectionVariables.set('refresh_token', jsonData.refresh);",
+									"    }",
+									"    console.log('JWT tokens updated in collection variables');",
 									"}"
 								],
 								"type": "text/javascript"
@@ -95,6 +134,38 @@
 							"path": ["api", "auth", "login", ""]
 						},
 						"description": "Authenticates user credentials and returns JWT access and refresh tokens."
+					}
+				},
+				{
+					"name": "Logout & Blacklist Token",
+					"request": {
+						"auth": {
+							"type": "bearer",
+							"bearer": [
+								{
+									"key": "token",
+									"value": "{{access_token}}",
+									"type": "string"
+								}
+							]
+						},
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"refresh\": \"{{refresh_token}}\"\n}"
+						},
+						"url": {
+							"raw": "{{base_url}}/api/auth/logout/",
+							"host": ["{{base_url}}"],
+							"path": ["api", "auth", "logout", ""]
+						},
+						"description": "Blacklists the refresh token to terminate session securely."
 					}
 				}
 			]
@@ -135,7 +206,7 @@
 					}
 				},
 				{
-					"name": "Get All Patients (User-scoped)",
+					"name": "Get All Patients (Paginated & Filterable)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -150,11 +221,17 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/patients/",
+							"raw": "{{base_url}}/api/patients/?page=1&page_size=10&gender=Male&search=Arthur",
 							"host": ["{{base_url}}"],
-							"path": ["api", "patients", ""]
+							"path": ["api", "patients", ""],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "page_size", "value": "10" },
+								{ "key": "gender", "value": "Male" },
+								{ "key": "search", "value": "Arthur" }
+							]
 						},
-						"description": "Retrieves all patients created by the authenticated user."
+						"description": "Retrieves paginated patients created by user. Supports search and gender filtering."
 					}
 				},
 				{
@@ -213,7 +290,7 @@
 					}
 				},
 				{
-					"name": "Delete Patient",
+					"name": "Delete Patient (Soft-delete)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -232,7 +309,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "patients", "{{patient_id}}", ""]
 						},
-						"description": "Deletes a patient record."
+						"description": "Soft-deletes a patient record complying with medical retention laws."
 					}
 				}
 			]
@@ -273,7 +350,7 @@
 					}
 				},
 				{
-					"name": "Get All Doctors",
+					"name": "Get All Doctors (Paginated & Searchable)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -288,11 +365,17 @@
 						"method": "GET",
 						"header": [],
 						"url": {
-							"raw": "{{base_url}}/api/doctors/",
+							"raw": "{{base_url}}/api/doctors/?page=1&page_size=10&specialization=Surgery%20%26%20Forensic%20Pathology&search=Bell",
 							"host": ["{{base_url}}"],
-							"path": ["api", "doctors", ""]
+							"path": ["api", "doctors", ""],
+							"query": [
+								{ "key": "page", "value": "1" },
+								{ "key": "page_size", "value": "10" },
+								{ "key": "specialization", "value": "Surgery & Forensic Pathology" },
+								{ "key": "search", "value": "Bell" }
+							]
 						},
-						"description": "Retrieves the directory of all doctors."
+						"description": "Retrieves the directory of doctors with pagination, search, and specialization filter."
 					}
 				},
 				{
@@ -351,7 +434,7 @@
 					}
 				},
 				{
-					"name": "Delete Doctor",
+					"name": "Delete Doctor (Soft-delete)",
 					"request": {
 						"auth": {
 							"type": "bearer",
@@ -370,7 +453,7 @@
 							"host": ["{{base_url}}"],
 							"path": ["api", "doctors", "{{doctor_id}}", ""]
 						},
-						"description": "Deletes a doctor record."
+						"description": "Soft-deletes a doctor record."
 					}
 				}
 			]
